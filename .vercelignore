@@ -1,0 +1,9 @@
+.venv
+__pycache__
+.git
+.gitignore
+README.md
+uv.lock
+pyproject.toml
+scripts
+init_log.txt
