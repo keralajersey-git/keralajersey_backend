@@ -14,9 +14,13 @@ APPWRITE_COLLECTION_ID = os.getenv("APPWRITE_COLLECTION_ID")
 APPWRITE_BUCKET_ID = os.getenv("APPWRITE_BUCKET_ID")
 
 client = Client()
-client.set_endpoint(APPWRITE_ENDPOINT)
-client.set_project(APPWRITE_PROJECT_ID)
-client.set_key(APPWRITE_API_KEY)
+
+if APPWRITE_ENDPOINT:
+    client.set_endpoint(APPWRITE_ENDPOINT)
+if APPWRITE_PROJECT_ID:
+    client.set_project(APPWRITE_PROJECT_ID)
+if APPWRITE_API_KEY:
+    client.set_key(APPWRITE_API_KEY)
 
 databases = Databases(client)
 storage = Storage(client)
