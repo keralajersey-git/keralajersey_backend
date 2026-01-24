@@ -12,7 +12,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 @router.post("/", response_model=Product)
 async def create_product(product: ProductCreate):
     try:
-        response = await AppwriteService.create_product(product)
+        response = AppwriteService.create_product(product)
         return response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -20,28 +20,28 @@ async def create_product(product: ProductCreate):
 @router.get("/", response_model=List[Product])
 async def get_products():
     try:
-        return await AppwriteService.get_products()
+        return AppwriteService.get_products()
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{product_id}", response_model=Product)
 async def get_product(product_id: str):
     try:
-        return await AppwriteService.get_product(product_id)
+        return AppwriteService.get_product(product_id)
     except Exception as e:
         raise HTTPException(status_code=404, detail="Product not found")
 
 @router.put("/{product_id}", response_model=Product)
 async def update_product(product_id: str, product_update: ProductUpdate):
     try:
-        return await AppwriteService.update_product(product_id, product_update)
+        return AppwriteService.update_product(product_id, product_update)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{product_id}")
 async def delete_product(product_id: str):
     try:
-        await AppwriteService.delete_product(product_id)
+        AppwriteService.delete_product(product_id)
         return {"message": "Product deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -6,7 +6,7 @@ import json
 
 class AppwriteService:
     @staticmethod
-    async def create_product(product: ProductCreate):
+    def create_product(product: ProductCreate):
         data = product.model_dump()
         # Appwrite likes flat objects for attributes
         # If available_sizes is a list, we might need to store it as a JSON string or Appwrite's array attribute
@@ -21,7 +21,7 @@ class AppwriteService:
         return response
 
     @staticmethod
-    async def get_products():
+    def get_products():
         response = databases.list_documents(
             database_id=APPWRITE_DATABASE_ID,
             collection_id=APPWRITE_COLLECTION_ID
@@ -29,7 +29,7 @@ class AppwriteService:
         return response["documents"]
 
     @staticmethod
-    async def get_product(product_id: str):
+    def get_product(product_id: str):
         response = databases.get_document(
             database_id=APPWRITE_DATABASE_ID,
             collection_id=APPWRITE_COLLECTION_ID,
@@ -38,7 +38,7 @@ class AppwriteService:
         return response
 
     @staticmethod
-    async def update_product(product_id: str, product_update: ProductUpdate):
+    def update_product(product_id: str, product_update: ProductUpdate):
         data = product_update.model_dump(exclude_unset=True)
         response = databases.update_document(
             database_id=APPWRITE_DATABASE_ID,
@@ -49,7 +49,7 @@ class AppwriteService:
         return response
 
     @staticmethod
-    async def delete_product(product_id: str):
+    def delete_product(product_id: str):
         response = databases.delete_document(
             database_id=APPWRITE_DATABASE_ID,
             collection_id=APPWRITE_COLLECTION_ID,
