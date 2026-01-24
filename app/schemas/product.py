@@ -4,7 +4,7 @@ from typing import List, Optional
 class ProductBase(BaseModel):
     title: str
     description: str
-    category: str = "Uncategorized"
+    category: Optional[str] = None
     available_sizes: List[str]
     stock: bool = True
     stock_left: Optional[int] = None
