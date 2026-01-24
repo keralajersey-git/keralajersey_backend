@@ -18,7 +18,7 @@ class ProductBase(BaseModel):
         return self
 
 class ProductCreate(ProductBase):
-    # These will be Appwrite file IDs after upload
+    
     image1: str
     image2: Optional[str] = None
     image3: Optional[str] = None
