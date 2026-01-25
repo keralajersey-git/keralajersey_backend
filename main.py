@@ -14,6 +14,10 @@ app.add_middleware(
 )
 
 # Include routers
+@app.get("/")
+async def root():
+    return {"message": "Kerala Jersey Backend API is running"}
+
 app.include_router(products.router)
 
 @app.get("/")

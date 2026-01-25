@@ -3,19 +3,14 @@ from typing import List, Optional
 
 class ProductBase(BaseModel):
     title: str
-    description: str
-    category: Optional[str] = None
-    available_sizes: List[str]
+    description: Optional[str] = ""
+    category: Optional[str] = "top-quality"
+    available_sizes: Optional[List[str]] = ["S", "M", "L", "XL"]
     stock: bool = True
-    stock_left: Optional[int] = None
-    price: float
+    stock_left: Optional[int] = 0
+    price: float = 0.0
     free_delivery: bool = False
 
-    @model_validator(mode='after')
-    def check_stock_left(self):
-        if self.stock and self.stock_left is None:
-            raise ValueError('stock_left must be provided if stock is True')
-        return self
 
 class ProductCreate(ProductBase):
     

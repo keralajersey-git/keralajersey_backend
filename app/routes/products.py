@@ -4,12 +4,12 @@ from app.schemas.product import Product, ProductCreate, ProductUpdate
 from app.services.appwrite_service import AppwriteService
 from appwrite.input_file import InputFile
 from appwrite.id import ID
-from app.config import storage, APPWRITE_BUCKET_ID
+from app.config import storage, APPWRITE_BUCKET_ID, APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID
 import json
 
 router = APIRouter(prefix="/products", tags=["products"])
 
-@router.post("/", response_model=Product)
+@router.post("/", response_model=Product, response_model_by_alias=True)
 async def create_product(product: ProductCreate):
     try:
         response = AppwriteService.create_product(product)
@@ -17,24 +17,25 @@ async def create_product(product: ProductCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/", response_model=List[Product])
+@router.get("/", response_model=List[Product], response_model_by_alias=True)
 async def get_products():
     try:
         return AppwriteService.get_products()
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/{product_id}", response_model=Product)
+@router.get("/{product_id}", response_model=Product, response_model_by_alias=True)
 async def get_product(product_id: str):
     try:
         return AppwriteService.get_product(product_id)
     except Exception as e:
         raise HTTPException(status_code=404, detail="Product not found")
 
-@router.put("/{product_id}", response_model=Product)
+@router.put("/{product_id}", response_model=Product, response_model_by_alias=True)
 async def update_product(product_id: str, product_update: ProductUpdate):
     try:
-        return AppwriteService.update_product(product_id, product_update)
+        response = AppwriteService.update_product(product_id, product_update)
+        return response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -57,6 +58,13 @@ async def upload_image(file: UploadFile = File(...)):
             file_id=ID.unique(),
             file=input_file
         )
-        return {"file_id": response["$id"]}
+        
+        # Construct the view URL
+        image_url = f"{APPWRITE_ENDPOINT}/storage/buckets/{APPWRITE_BUCKET_ID}/files/{response['$id']}/view?project={APPWRITE_PROJECT_ID}"
+        
+        return {
+            "file_id": response["$id"],
+            "url": image_url
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
