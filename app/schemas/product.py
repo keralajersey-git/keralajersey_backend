@@ -10,6 +10,7 @@ class ProductBase(BaseModel):
     stock_left: Optional[int] = 0
     price: float = 0.0
     original_price: Optional[float] = None
+    sub_category: Optional[str] = None
     free_delivery: bool = False
 
 
@@ -28,6 +29,7 @@ class ProductUpdate(BaseModel):
     stock_left: Optional[int] = None
     price: Optional[float] = None
     original_price: Optional[float] = None
+    sub_category: Optional[str] = None
     free_delivery: Optional[bool] = None
     image1: Optional[str] = None
     image2: Optional[str] = None
