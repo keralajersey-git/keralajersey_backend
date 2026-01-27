@@ -8,9 +8,10 @@ app = FastAPI(title="Kerala Jersey Backend")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173", 
-        "https://keralajersey.vercel.app"
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://keralajersey.vercel.app",
+        "https://keralajersey.in",
     ],
     allow_origin_regex=r"https://keralajersey-.*\.vercel\.app",  # Allow Vercel preview deployments
     allow_credentials=True,
@@ -21,9 +22,11 @@ app.add_middleware(
 # Include routers
 app.include_router(products.router)
 
+
 @app.get("/")
 async def root():
     return {"message": "Kerala Jersey Backend API is running"}
+
 
 @app.get("/health")
 async def health_check():
