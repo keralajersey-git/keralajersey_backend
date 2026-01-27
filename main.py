@@ -12,8 +12,9 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "https://keralajersey.vercel.app",
         "https://keralajersey.in",
+        "https://www.keralajersey.in",
     ],
-    allow_origin_regex=r"https://keralajersey-.*\.vercel\.app",  # Allow Vercel preview deployments
+    allow_origin_regex=r"https://(www\.)?keralajersey(-.*)?\.vercel\.app",  # Allow Vercel preview deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
