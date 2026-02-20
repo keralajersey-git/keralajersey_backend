@@ -1,9 +1,46 @@
+# Virtual Environment
 .venv
+env
+
+# Python cache files
 __pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+
+# Git files
 .git
 .gitignore
+
+# Documentation
 README.md
+DEPLOYMENT.md
+VERCEL_FIX_GUIDE.md
+
+# Lock files
 uv.lock
-pyproject.toml
+
+# Configuration files (keep pyproject.toml for Vercel)
+# pyproject.toml
+
+# Scripts and logs
 scripts
 init_log.txt
+
+# Environment files
+.env
+.env.local
+
+# IDE files
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+test_*.py
+*_test.py
