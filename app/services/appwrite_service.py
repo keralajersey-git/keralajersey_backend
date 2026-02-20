@@ -45,7 +45,8 @@ class AppwriteService:
         try:
             response = databases.list_documents(
                 database_id=APPWRITE_DATABASE_ID,
-                collection_id=APPWRITE_COLLECTION_ID
+                collection_id=APPWRITE_COLLECTION_ID,
+                queries=[Query.limit(100)]
             )
             products = [AppwriteService._transform_product(doc) for doc in response["documents"]]
             
