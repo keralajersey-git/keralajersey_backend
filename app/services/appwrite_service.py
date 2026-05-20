@@ -48,22 +48,25 @@ class AppwriteService:
             cursor_after = None
             
             while True:
-                queries = [Query.limit(limit)]
+                queries = [Query.limit(limit), Query.order_asc("$id")]
                 if cursor_after:
                     queries.append(Query.cursor_after(cursor_after))
                 
+                print(f"DEBUG: Fetching products with queries: {queries}")
                 response = databases.list_documents(
                     database_id=APPWRITE_DATABASE_ID,
                     collection_id=APPWRITE_COLLECTION_ID,
                     queries=queries
                 )
                 documents = response["documents"]
+                print(f"DEBUG: Got {len(documents)} documents")
                 all_products.extend(documents)
                 
                 if len(documents) < limit:
                     break
                     
                 cursor_after = documents[-1]["$id"]
+                print(f"DEBUG: Using cursor after: {cursor_after}")
             
             products = [AppwriteService._transform_product(doc) for doc in all_products]
             
@@ -73,7 +76,10 @@ class AppwriteService:
             print(f"DEBUG: Found {len(products)} products in Appwrite.")
             return products
         except Exception as e:
-            print(f"DEBUG: Appwrite error: {str(e)}")
+            print(f"DEBUG: Appwrite error type: {type(e).__name__}")
+            print(f"DEBUG: Appwrite error message: {str(e)}")
+            import traceback
+            print(f"DEBUG: Appwrite error traceback: {traceback.format_exc()}")
             raise e
 
     @staticmethod
