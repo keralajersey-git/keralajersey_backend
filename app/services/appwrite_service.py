@@ -43,37 +43,29 @@ class AppwriteService:
     @staticmethod
     def get_products():
         try:
-            all_products = []
-            limit = 100
-            cursor_after = None
+            print("DEBUG: Starting get_products()")
+            print(f"DEBUG: APPWRITE_DATABASE_ID: {APPWRITE_DATABASE_ID}")
+            print(f"DEBUG: APPWRITE_COLLECTION_ID: {APPWRITE_COLLECTION_ID}")
             
-            while True:
-                queries = [Query.limit(limit), Query.order_asc("$id")]
-                if cursor_after:
-                    queries.append(Query.cursor_after(cursor_after))
-                
-                print(f"DEBUG: Fetching products with queries: {queries}")
-                response = databases.list_documents(
-                    database_id=APPWRITE_DATABASE_ID,
-                    collection_id=APPWRITE_COLLECTION_ID,
-                    queries=queries
-                )
-                documents = response["documents"]
-                print(f"DEBUG: Got {len(documents)} documents")
-                all_products.extend(documents)
-                
-                if len(documents) < limit:
-                    break
-                    
-                cursor_after = documents[-1]["$id"]
-                print(f"DEBUG: Using cursor after: {cursor_after}")
+            response = databases.list_documents(
+                database_id=APPWRITE_DATABASE_ID,
+                collection_id=APPWRITE_COLLECTION_ID
+            )
+            print(f"DEBUG: Appwrite response keys: {response.keys()}")
+            documents = response["documents"]
+            print(f"DEBUG: Got {len(documents)} raw documents")
             
-            products = [AppwriteService._transform_product(doc) for doc in all_products]
+            products = []
+            for doc in documents:
+                try:
+                    transformed = AppwriteService._transform_product(doc)
+                    products.append(transformed)
+                except Exception as e:
+                    print(f"DEBUG: Error transforming document {doc.get('$id', 'unknown')}: {str(e)}")
             
-            # Sort by $createdAt descending (latest first)
             products.sort(key=lambda x: x.get('$createdAt', ''), reverse=True)
             
-            print(f"DEBUG: Found {len(products)} products in Appwrite.")
+            print(f"DEBUG: Returning {len(products)} products")
             return products
         except Exception as e:
             print(f"DEBUG: Appwrite error type: {type(e).__name__}")

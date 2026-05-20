@@ -37,7 +37,7 @@ class ProductUpdate(BaseModel):
 
 class Product(ProductBase):
     id: str = Field(alias="$id")
-    image1: str
+    image1: Optional[str] = None
     image2: Optional[str] = None
     image3: Optional[str] = None
 
