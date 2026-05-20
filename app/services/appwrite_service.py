@@ -45,13 +45,17 @@ class AppwriteService:
         try:
             all_products = []
             limit = 100
-            offset = 0
+            cursor_after = None
             
             while True:
+                queries = [Query.limit(limit)]
+                if cursor_after:
+                    queries.append(Query.cursor_after(cursor_after))
+                
                 response = databases.list_documents(
                     database_id=APPWRITE_DATABASE_ID,
                     collection_id=APPWRITE_COLLECTION_ID,
-                    queries=[Query.limit(limit), Query.offset(offset)]
+                    queries=queries
                 )
                 documents = response["documents"]
                 all_products.extend(documents)
@@ -59,7 +63,7 @@ class AppwriteService:
                 if len(documents) < limit:
                     break
                     
-                offset += limit
+                cursor_after = documents[-1]["$id"]
             
             products = [AppwriteService._transform_product(doc) for doc in all_products]
             
