@@ -68,16 +68,33 @@ class AppwriteService:
             print(f"DEBUG: APPWRITE_DATABASE_ID: {APPWRITE_DATABASE_ID}")
             print(f"DEBUG: APPWRITE_COLLECTION_ID: {APPWRITE_COLLECTION_ID}")
             
-            response = databases.list_documents(
-                database_id=APPWRITE_DATABASE_ID,
-                collection_id=APPWRITE_COLLECTION_ID
-            )
+            all_products = []
+            limit = 100
+            offset = 0
+            max_iterations = 100  # Safety limit
+            
+            for i in range(max_iterations):
+                print(f"DEBUG: Fetching batch {i+1} with offset {offset}")
+                response = databases.list_documents(
+                    database_id=APPWRITE_DATABASE_ID,
+                    collection_id=APPWRITE_COLLECTION_ID,
+                    queries=[Query.limit(limit), Query.offset(offset)]
+                )
+                documents = response["documents"]
+                print(f"DEBUG: Got {len(documents)} documents in batch")
+                all_products.extend(documents)
+                
+                if len(documents) < limit:
+                    print(f"DEBUG: No more documents to fetch")
+                    break
+                    
+                offset += limit
+            
             print(f"DEBUG: Appwrite response keys: {response.keys()}")
-            documents = response["documents"]
-            print(f"DEBUG: Got {len(documents)} raw documents")
+            print(f"DEBUG: Got {len(all_products)} raw documents total")
             
             products = []
-            for doc in documents:
+            for doc in all_products:
                 try:
                     transformed = AppwriteService._transform_product(doc)
                     products.append(transformed)
