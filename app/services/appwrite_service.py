@@ -27,6 +27,22 @@ class AppwriteService:
             val = doc.get(img_field)
             if val:
                 doc[img_field] = AppwriteService._ensure_image_url(val)
+        
+        # Set default values for all required fields to prevent missing data errors
+        doc.setdefault('title', 'Untitled Product')
+        doc.setdefault('description', '')
+        doc.setdefault('category', 'top-quality')
+        doc.setdefault('available_sizes', ['S', 'M', 'L', 'XL'])
+        doc.setdefault('stock', True)
+        doc.setdefault('stock_left', 0)
+        doc.setdefault('price', 0.0)
+        doc.setdefault('original_price', None)
+        doc.setdefault('sub_category', None)
+        doc.setdefault('free_delivery', False)
+        doc.setdefault('image1', None)
+        doc.setdefault('image2', None)
+        doc.setdefault('image3', None)
+        
         return doc
 
     @staticmethod

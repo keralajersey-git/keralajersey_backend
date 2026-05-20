@@ -17,11 +17,15 @@ async def create_product(product: ProductCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/", response_model=List[Product], response_model_by_alias=True)
+@router.get("/")
 async def get_products():
     try:
-        return AppwriteService.get_products()
+        products = AppwriteService.get_products()
+        return products
     except Exception as e:
+        print(f"DEBUG: Route error: {str(e)}")
+        import traceback
+        print(f"DEBUG: Route error traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{product_id}", response_model=Product, response_model_by_alias=True)
