@@ -43,12 +43,25 @@ class AppwriteService:
     @staticmethod
     def get_products():
         try:
-            response = databases.list_documents(
-                database_id=APPWRITE_DATABASE_ID,
-                collection_id=APPWRITE_COLLECTION_ID,
-                queries=[Query.limit(100)]
-            )
-            products = [AppwriteService._transform_product(doc) for doc in response["documents"]]
+            all_products = []
+            limit = 100
+            offset = 0
+            
+            while True:
+                response = databases.list_documents(
+                    database_id=APPWRITE_DATABASE_ID,
+                    collection_id=APPWRITE_COLLECTION_ID,
+                    queries=[Query.limit(limit), Query.offset(offset)]
+                )
+                documents = response["documents"]
+                all_products.extend(documents)
+                
+                if len(documents) < limit:
+                    break
+                    
+                offset += limit
+            
+            products = [AppwriteService._transform_product(doc) for doc in all_products]
             
             # Sort by $createdAt descending (latest first)
             products.sort(key=lambda x: x.get('$createdAt', ''), reverse=True)
