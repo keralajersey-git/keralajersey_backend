@@ -32,7 +32,12 @@ class AppwriteService:
         doc.setdefault('title', 'Untitled Product')
         doc.setdefault('description', '')
         doc.setdefault('category', 'top-quality')
-        doc.setdefault('available_sizes', ['S', 'M', 'L', 'XL'])
+        
+        # Handle available_sizes - ensure it's always a list
+        available_sizes = doc.get('available_sizes')
+        if available_sizes is None or not isinstance(available_sizes, list):
+            doc['available_sizes'] = ['S', 'M', 'L', 'XL']
+        
         doc.setdefault('stock', True)
         doc.setdefault('stock_left', 0)
         doc.setdefault('price', 0.0)
