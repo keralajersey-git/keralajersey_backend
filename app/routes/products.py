@@ -26,31 +26,6 @@ async def get_products():
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/{product_id}", response_model=Product, response_model_by_alias=True)
-async def get_product(product_id: str):
-    product = DBService.get_product(product_id)
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return product
-
-@router.put("/{product_id}", response_model=Product, response_model_by_alias=True)
-async def update_product(product_id: str, product_update: ProductUpdate):
-    try:
-        response = DBService.update_product(product_id, product_update)
-        if not response:
-            raise HTTPException(status_code=404, detail="Product not found")
-        return response
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.delete("/{product_id}")
-async def delete_product(product_id: str):
-    try:
-        DBService.delete_product(product_id)
-        return {"message": "Product deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
 @router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     token = os.getenv("BLOB_READ_WRITE_TOKEN")
@@ -77,6 +52,32 @@ async def upload_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=e.code, detail=f"Vercel Blob upload failed: {error_body}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{product_id}", response_model=Product, response_model_by_alias=True)
+async def get_product(product_id: str):
+    product = DBService.get_product(product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
+
+@router.put("/{product_id}", response_model=Product, response_model_by_alias=True)
+async def update_product(product_id: str, product_update: ProductUpdate):
+    try:
+        response = DBService.update_product(product_id, product_update)
+        if not response:
+            raise HTTPException(status_code=404, detail="Product not found")
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.delete("/{product_id}")
+async def delete_product(product_id: str):
+    try:
+        DBService.delete_product(product_id)
+        return {"message": "Product deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.post("/storage/webhook")
 async def storage_webhook(request: Request):
