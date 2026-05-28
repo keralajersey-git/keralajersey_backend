@@ -1,4 +1,8 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File
+import os
+import urllib.request
+import urllib.parse
+import urllib.error
 from app.schemas.product import Product, ProductCreate, ProductUpdate
 from app.services.db_service import DBService
 from app.config import BLOB_STORE_ID, verify_webhook_signature
@@ -46,6 +50,33 @@ async def delete_product(product_id: str):
         return {"message": "Product deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/upload-image")
+async def upload_image(file: UploadFile = File(...)):
+    token = os.getenv("BLOB_READ_WRITE_TOKEN")
+    if not token:
+        raise HTTPException(status_code=500, detail="Vercel Blob token not configured")
+
+    try:
+        file_content = await file.read()
+        filename = file.filename or "upload.png"
+        url_filename = urllib.parse.quote(filename)
+        url = f"https://blob.vercel-storage.com/{url_filename}"
+
+        req = urllib.request.Request(url, data=file_content, method="PUT")
+        req.add_header("Authorization", f"Bearer {token}")
+        req.add_header("x-api-version", "7")
+        if file.content_type:
+            req.add_header("content-type", file.content_type)
+
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            return {"url": result.get("url")}
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        raise HTTPException(status_code=e.code, detail=f"Vercel Blob upload failed: {error_body}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/storage/webhook")
 async def storage_webhook(request: Request):
