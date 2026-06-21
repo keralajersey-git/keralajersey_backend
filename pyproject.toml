@@ -12,4 +12,5 @@ dependencies = [
     "uvicorn>=0.40.0",
     "psycopg2-binary>=2.9.9",
     "cryptography>=42.0.5",
+    "cloudinary>=1.36.0",
 ]
