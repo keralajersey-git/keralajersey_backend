@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 import os
 import json
+from io import BytesIO
 from app.schemas.product import Product, ProductCreate, ProductUpdate
 from app.services.db_service import DBService
 import cloudinary.uploader
@@ -28,9 +29,13 @@ async def upload_image(file: UploadFile = File(...)):
     try:
         file_content = await file.read()
         
+        # Create a BytesIO object for Cloudinary
+        file_obj = BytesIO(file_content)
+        file_obj.name = file.filename or "upload.png"
+        
         # Upload to Cloudinary
         result = cloudinary.uploader.upload(
-            file_content,
+            file_obj,
             folder="keralajersey",
             resource_type="auto",
             public_id=file.filename.split('.')[0] if file.filename else None
@@ -38,7 +43,11 @@ async def upload_image(file: UploadFile = File(...)):
         
         return {"url": result.get("secure_url")}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        import traceback
+        error_msg = str(e)
+        traceback.print_exc()
+        print(f"Upload error: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {error_msg}")
 
 @router.get("/{product_id}", response_model=Product, response_model_by_alias=True)
 async def get_product(product_id: str):
