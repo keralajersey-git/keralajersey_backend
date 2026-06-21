@@ -1,5 +1,6 @@
 import json
 import uuid
+import psycopg2
 from psycopg2.extras import RealDictCursor
 from app.config import get_db_connection
 
@@ -29,10 +30,18 @@ CREATE TABLE IF NOT EXISTS products (
 class DBService:
     @staticmethod
     def ensure_table_exists():
-        with get_db_connection() as conn:
+        conn = None
+        try:
+            conn = get_db_connection()
             with conn.cursor() as cur:
                 cur.execute(CREATE_TABLE_SQL)
                 conn.commit()
+        except Exception as e:
+            print(f"Error ensuring table exists: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
 
     @staticmethod
     def _row_to_product(row):
@@ -92,32 +101,56 @@ INSERT INTO products(
             "sub_category": product_data.get("sub_category"),
         }
 
-        with get_db_connection() as conn:
+        conn = None
+        try:
+            conn = get_db_connection()
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(insert_sql, params)
                 row = cur.fetchone()
                 conn.commit()
                 return DBService._row_to_product(row)
+        except Exception as e:
+            print(f"Error creating product: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
 
     @staticmethod
     def get_products():
         DBService.ensure_table_exists()
         query = "SELECT * FROM products ORDER BY created_at DESC NULLS LAST;"
-        with get_db_connection() as conn:
+        conn = None
+        try:
+            conn = get_db_connection()
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(query)
                 rows = cur.fetchall()
                 return [DBService._row_to_product(row) for row in rows]
+        except Exception as e:
+            print(f"Error fetching products: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
 
     @staticmethod
     def get_product(product_id: str):
         DBService.ensure_table_exists()
         query = "SELECT * FROM products WHERE id = %s;"
-        with get_db_connection() as conn:
+        conn = None
+        try:
+            conn = get_db_connection()
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(query, (product_id,))
                 row = cur.fetchone()
                 return DBService._row_to_product(row)
+        except Exception as e:
+            print(f"Error fetching product: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
 
     @staticmethod
     def update_product(product_id: str, product_update):
@@ -137,18 +170,34 @@ INSERT INTO products(
         set_clauses.append("updated_at = now()")
         query = f"UPDATE products SET {', '.join(set_clauses)} WHERE id = %(id)s RETURNING *;"
 
-        with get_db_connection() as conn:
+        conn = None
+        try:
+            conn = get_db_connection()
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(query, params)
                 row = cur.fetchone()
                 conn.commit()
                 return DBService._row_to_product(row)
+        except Exception as e:
+            print(f"Error updating product: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
 
     @staticmethod
     def delete_product(product_id: str):
         DBService.ensure_table_exists()
         query = "DELETE FROM products WHERE id = %s;"
-        with get_db_connection() as conn:
+        conn = None
+        try:
+            conn = get_db_connection()
             with conn.cursor() as cur:
                 cur.execute(query, (product_id,))
                 conn.commit()
+        except Exception as e:
+            print(f"Error deleting product: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
