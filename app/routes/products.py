@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 import os
 import json
+from io import BytesIO
 from app.schemas.product import Product, ProductCreate, ProductUpdate
 from app.services.db_service import DBService
-import cloudinary.uploader
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -15,30 +15,50 @@ async def create_product(product: ProductCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.get("/test")
+async def test_endpoint():
+    """Test endpoint to verify backend is working"""
+    return {"message": "Backend is working", "status": "ok"}
+
 @router.get("/")
 async def get_products():
     try:
         products = DBService.get_products()
         return products
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        import traceback
+        print(f"Error in get_products: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     try:
+        import cloudinary.uploader
+        
         file_content = await file.read()
+        
+        # Create a BytesIO object for Cloudinary
+        file_obj = BytesIO(file_content)
+        file_obj.name = file.filename or "upload.png"
         
         # Upload to Cloudinary
         result = cloudinary.uploader.upload(
-            file_content,
+            file_obj,
             folder="keralajersey",
             resource_type="auto",
             public_id=file.filename.split('.')[0] if file.filename else None
         )
         
         return {"url": result.get("secure_url")}
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Cloudinary SDK not installed")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        import traceback
+        error_msg = str(e)
+        traceback.print_exc()
+        print(f"Upload error: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {error_msg}")
 
 @router.get("/{product_id}", response_model=Product, response_model_by_alias=True)
 async def get_product(product_id: str):
