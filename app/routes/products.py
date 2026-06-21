@@ -34,7 +34,16 @@ async def get_products():
 @router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     try:
+        import cloudinary
         import cloudinary.uploader
+        import os
+        
+        # Configure cloudinary when endpoint is called
+        cloudinary.config(
+            cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+            api_key=os.getenv("CLOUDINARY_API_KEY"),
+            api_secret=os.getenv("CLOUDINARY_API_SECRET")
+        )
         
         file_content = await file.read()
         
@@ -51,8 +60,8 @@ async def upload_image(file: UploadFile = File(...)):
         )
         
         return {"url": result.get("secure_url")}
-    except ImportError:
-        raise HTTPException(status_code=500, detail="Cloudinary SDK not installed")
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"Cloudinary SDK not installed: {str(e)}")
     except Exception as e:
         import traceback
         error_msg = str(e)
