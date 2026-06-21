@@ -2,7 +2,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.routes import products
+from app.config import get_db_connection
 import traceback
+import os
 
 app = FastAPI(title="Kerala Jersey Backend")
 
@@ -18,7 +20,7 @@ app.add_middleware(
         "https://keralajersey.in",
         "https://www.keralajersey.in",
     ],
-    allow_origin_regex=r"https://(www\.)?keralajersey(-.*)?\.vercel\.app",  # Allow Vercel preview deployments
+    allow_origin_regex=r"https://(www\.)?keralajersey(-.*)?\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,8 +35,26 @@ async def global_exception_handler(request: Request, exc: Exception):
     traceback.print_exc()
     return JSONResponse(
         status_code=500,
+        headers={"Access-Control-Allow-Origin": "*"},
         content={"detail": str(exc)},
     )
+
+# Startup event
+@app.on_event("startup")
+async def startup():
+    print("Starting up...")
+    print(f"DATABASE_URL configured: {bool(os.getenv('DATABASE_URL'))}")
+    print(f"CLOUDINARY_CLOUD_NAME: {os.getenv('CLOUDINARY_CLOUD_NAME')}")
+    
+    # Test database connection
+    conn = None
+    try:
+        conn = get_db_connection()
+        print("✓ Database connection successful")
+        conn.close()
+    except Exception as e:
+        print(f"✗ Database connection failed: {e}")
+        traceback.print_exc()
 
 # Include routers
 app.include_router(products.router)
@@ -47,4 +67,11 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    conn = None
+    try:
+        conn = get_db_connection()
+        conn.close()
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        print(f"Health check - DB error: {e}")
+        return {"status": "degraded", "database": "disconnected", "error": str(e)}

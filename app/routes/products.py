@@ -16,6 +16,11 @@ async def create_product(product: ProductCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.get("/test")
+async def test_endpoint():
+    """Test endpoint to verify backend is working"""
+    return {"message": "Backend is working", "status": "ok"}
+
 @router.get("/")
 async def get_products():
     try:
