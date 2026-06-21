@@ -4,7 +4,6 @@ import json
 from io import BytesIO
 from app.schemas.product import Product, ProductCreate, ProductUpdate
 from app.services.db_service import DBService
-import cloudinary.uploader
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -35,6 +34,8 @@ async def get_products():
 @router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     try:
+        import cloudinary.uploader
+        
         file_content = await file.read()
         
         # Create a BytesIO object for Cloudinary
@@ -50,6 +51,8 @@ async def upload_image(file: UploadFile = File(...)):
         )
         
         return {"url": result.get("secure_url")}
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Cloudinary SDK not installed")
     except Exception as e:
         import traceback
         error_msg = str(e)

@@ -39,23 +39,6 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": str(exc)},
     )
 
-# Startup event
-@app.on_event("startup")
-async def startup():
-    print("Starting up...")
-    print(f"DATABASE_URL configured: {bool(os.getenv('DATABASE_URL'))}")
-    print(f"CLOUDINARY_CLOUD_NAME: {os.getenv('CLOUDINARY_CLOUD_NAME')}")
-    
-    # Test database connection
-    conn = None
-    try:
-        conn = get_db_connection()
-        print("✓ Database connection successful")
-        conn.close()
-    except Exception as e:
-        print(f"✗ Database connection failed: {e}")
-        traceback.print_exc()
-
 # Include routers
 app.include_router(products.router)
 
