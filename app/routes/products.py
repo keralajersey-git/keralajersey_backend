@@ -22,7 +22,10 @@ async def get_products():
         products = DBService.get_products()
         return products
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        import traceback
+        print(f"Error in get_products: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
