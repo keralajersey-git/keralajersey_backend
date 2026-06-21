@@ -2,6 +2,6 @@ fastapi>=0.110.0
 python-dotenv>=1.0.1
 uvicorn>=0.29.0
 psycopg2-binary>=2.9.9
-cryptography>=42.0.5
 appwrite==11.0.0
 python-multipart>=0.0.9
+cloudinary>=1.36.0
