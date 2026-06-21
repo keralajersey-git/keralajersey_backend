@@ -58,3 +58,5 @@ async def health_check():
     except Exception as e:
         print(f"Health check - DB error: {e}")
         return {"status": "degraded", "database": "disconnected", "error": str(e)}
+
+# Trigger Vercel rebuild - 06/21/2026 15:43:02
