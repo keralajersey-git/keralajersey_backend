@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Query
 import os
 import json
 from io import BytesIO
-from app.schemas.product import Product, ProductCreate, ProductUpdate
+from app.schemas.product import Product, ProductCreate, ProductUpdate, ReviewCreate
 from app.services.db_service import DBService
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -21,9 +21,21 @@ async def test_endpoint():
     return {"message": "Backend is working", "status": "ok"}
 
 @router.get("/")
-async def get_products():
+async def get_products(
+    page: int = Query(1, ge=1),
+    limit: int = Query(12, ge=1, le=1000),
+    search: str = Query(""),
+    category: str = Query(""),
+    sub_category: str = Query(""),
+):
     try:
-        products = DBService.get_products()
+        products = DBService.get_products(
+            page=page,
+            limit=limit,
+            search=search.strip(),
+            category=category.strip() or None,
+            sub_category=sub_category.strip() or None,
+        )
         return products
     except Exception as e:
         import traceback
@@ -68,6 +80,37 @@ async def upload_image(file: UploadFile = File(...)):
         traceback.print_exc()
         print(f"Upload error: {error_msg}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {error_msg}")
+
+@router.get("/{product_id}/reviews")
+async def get_reviews(product_id: str):
+    try:
+        reviews = DBService.get_reviews(product_id)
+        return reviews
+    except Exception as e:
+        import traceback
+        print(f"Error in get_reviews: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.post("/{product_id}/reviews")
+async def create_review(product_id: str, review: ReviewCreate):
+    try:
+        product = DBService.get_product(product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        created = DBService.create_review(
+            product_id, review.customer_name, review.review
+        )
+        return created
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"Error in create_review: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.get("/{product_id}", response_model=Product, response_model_by_alias=True)
 async def get_product(product_id: str):

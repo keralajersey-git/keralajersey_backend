@@ -1,4 +1,5 @@
 import json
+import math
 import uuid
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -24,6 +25,17 @@ CREATE TABLE IF NOT EXISTS products (
   category TEXT,
   original_price NUMERIC,
   sub_category TEXT
+);
+"""
+
+
+CREATE_REVIEWS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS reviews (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  customer_name TEXT NOT NULL,
+  review TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 """
 
@@ -70,6 +82,73 @@ class DBService:
             "image2": row.get("image2"),
             "image3": row.get("image3"),
         }
+
+    @staticmethod
+    def ensure_reviews_table_exists():
+        conn = None
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cur:
+                cur.execute(CREATE_REVIEWS_TABLE_SQL)
+                conn.commit()
+        except Exception as e:
+            print(f"Error ensuring reviews table exists: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
+
+    @staticmethod
+    def create_review(product_id: str, customer_name: str, review: str):
+        DBService.ensure_reviews_table_exists()
+        review_id = str(uuid.uuid4())
+        insert_sql = """
+INSERT INTO reviews(id, product_id, customer_name, review, created_at)
+VALUES (%(id)s, %(product_id)s, %(customer_name)s, %(review)s, now())
+RETURNING *;
+"""
+        params = {
+            "id": review_id,
+            "product_id": product_id,
+            "customer_name": customer_name,
+            "review": review,
+        }
+
+        conn = None
+        try:
+            conn = get_db_connection()
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(insert_sql, params)
+                row = cur.fetchone()
+                conn.commit()
+                return row
+        except Exception as e:
+            print(f"Error creating review: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
+
+    @staticmethod
+    def get_reviews(product_id: str):
+        DBService.ensure_reviews_table_exists()
+        query = (
+            "SELECT * FROM reviews WHERE product_id = %s "
+            "ORDER BY created_at DESC;"
+        )
+        conn = None
+        try:
+            conn = get_db_connection()
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(query, (product_id,))
+                rows = cur.fetchall()
+                return rows
+        except Exception as e:
+            print(f"Error fetching reviews: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
 
     @staticmethod
     def create_product(product):
@@ -124,21 +203,56 @@ INSERT INTO products(
                 conn.close()
 
     @staticmethod
-    def get_products():
+    def get_products(page=1, limit=12, search="", category=None, sub_category=None):
         DBService.ensure_table_exists()
+        page = max(int(page), 1)
+        limit = max(int(limit), 1)
+        offset = (page - 1) * limit
+
+        conditions = []
+        params = {}
+
+        if search:
+            conditions.append(
+                "(title ILIKE %(search)s OR description ILIKE %(search)s)"
+            )
+            params["search"] = f"%{search}%"
+        if category:
+            conditions.append("category = %(category)s")
+            params["category"] = category
+        if sub_category:
+            conditions.append("sub_category = %(sub_category)s")
+            params["sub_category"] = sub_category
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params["limit"] = limit
+        params["offset"] = offset
+
+        count_query = f"SELECT COUNT(*) AS total FROM products {where_clause};"
         query = (
-            "SELECT * FROM products "
+            f"SELECT * FROM products {where_clause} "
             "ORDER BY pinned DESC NULLS LAST, "
             "CASE WHEN pinned THEN updated_at ELSE created_at END DESC NULLS LAST, "
-            "created_at DESC NULLS LAST;"
+            "created_at DESC NULLS LAST "
+            "LIMIT %(limit)s OFFSET %(offset)s;"
         )
+
         conn = None
         try:
             conn = get_db_connection()
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute(query)
+                cur.execute(count_query, params)
+                total = cur.fetchone()["total"]
+                cur.execute(query, params)
                 rows = cur.fetchall()
-                return [DBService._row_to_product(row) for row in rows]
+                items = [DBService._row_to_product(row) for row in rows]
+                return {
+                    "items": items,
+                    "total": total,
+                    "page": page,
+                    "limit": limit,
+                    "pages": math.ceil(total / limit) if total > 0 else 0,
+                }
         except Exception as e:
             print(f"Error fetching products: {e}")
             raise

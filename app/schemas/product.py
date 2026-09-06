@@ -45,3 +45,8 @@ class Product(ProductBase):
 
     class Config:
         populate_by_name = True
+
+
+class ReviewCreate(BaseModel):
+    customer_name: str = Field(..., min_length=1, max_length=100)
+    review: str = Field(..., min_length=1, max_length=1000)
