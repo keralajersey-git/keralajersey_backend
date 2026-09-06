@@ -12,6 +12,7 @@ class ProductBase(BaseModel):
     original_price: Optional[float] = None
     sub_category: Optional[str] = None
     free_delivery: bool = False
+    pinned: bool = False
 
 
 class ProductCreate(ProductBase):
@@ -31,6 +32,7 @@ class ProductUpdate(BaseModel):
     original_price: Optional[float] = None
     sub_category: Optional[str] = None
     free_delivery: Optional[bool] = None
+    pinned: Optional[bool] = None
     image1: Optional[str] = None
     image2: Optional[str] = None
     image3: Optional[str] = None

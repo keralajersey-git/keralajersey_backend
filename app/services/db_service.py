@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS products (
   price NUMERIC,
   stock BOOLEAN,
   free_delivery BOOLEAN,
+  pinned BOOLEAN DEFAULT FALSE,
   category TEXT,
   original_price NUMERIC,
   sub_category TEXT
@@ -35,6 +36,10 @@ class DBService:
             conn = get_db_connection()
             with conn.cursor() as cur:
                 cur.execute(CREATE_TABLE_SQL)
+                # Idempotent migration for existing tables
+                cur.execute(
+                    "ALTER TABLE products ADD COLUMN IF NOT EXISTS pinned BOOLEAN DEFAULT FALSE;"
+                )
                 conn.commit()
         except Exception as e:
             print(f"Error ensuring table exists: {e}")
@@ -60,6 +65,7 @@ class DBService:
             "original_price": float(row["original_price"]) if row.get("original_price") is not None else None,
             "sub_category": row.get("sub_category"),
             "free_delivery": bool(row.get("free_delivery")) if row.get("free_delivery") is not None else False,
+            "pinned": bool(row.get("pinned")) if row.get("pinned") is not None else False,
             "image1": row.get("image1"),
             "image2": row.get("image2"),
             "image3": row.get("image3"),
@@ -75,12 +81,12 @@ class DBService:
         insert_sql = """
 INSERT INTO products(
   id, title, description, image1, image2, image3, available_sizes,
-  stock_left, price, stock, free_delivery, category, original_price, sub_category,
+  stock_left, price, stock, free_delivery, pinned, category, original_price, sub_category,
   created_at, updated_at
 ) VALUES (
   %(id)s, %(title)s, %(description)s, %(image1)s, %(image2)s, %(image3)s,
   %(available_sizes)s, %(stock_left)s, %(price)s, %(stock)s, %(free_delivery)s,
-  %(category)s, %(original_price)s, %(sub_category)s, now(), now()
+  %(pinned)s, %(category)s, %(original_price)s, %(sub_category)s, now(), now()
 ) RETURNING *;
 """
 
@@ -96,6 +102,7 @@ INSERT INTO products(
             "price": product_data.get("price"),
             "stock": product_data.get("stock"),
             "free_delivery": product_data.get("free_delivery"),
+            "pinned": product_data.get("pinned", False),
             "category": product_data.get("category"),
             "original_price": product_data.get("original_price"),
             "sub_category": product_data.get("sub_category"),
@@ -119,7 +126,12 @@ INSERT INTO products(
     @staticmethod
     def get_products():
         DBService.ensure_table_exists()
-        query = "SELECT * FROM products ORDER BY created_at DESC NULLS LAST;"
+        query = (
+            "SELECT * FROM products "
+            "ORDER BY pinned DESC NULLS LAST, "
+            "CASE WHEN pinned THEN updated_at ELSE created_at END DESC NULLS LAST, "
+            "created_at DESC NULLS LAST;"
+        )
         conn = None
         try:
             conn = get_db_connection()
