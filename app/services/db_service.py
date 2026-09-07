@@ -151,6 +151,81 @@ RETURNING *;
                 conn.close()
 
     @staticmethod
+    def get_all_reviews(page=1, limit=20, search=""):
+        DBService.ensure_reviews_table_exists()
+        page = max(int(page), 1)
+        limit = max(int(limit), 1)
+        offset = (page - 1) * limit
+
+        conditions = []
+        params = {}
+        if search:
+            conditions.append(
+                "(r.review ILIKE %(search)s OR r.customer_name ILIKE %(search)s "
+                "OR p.title ILIKE %(search)s)"
+            )
+            params["search"] = f"%{search}%"
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params["limit"] = limit
+        params["offset"] = offset
+
+        count_query = f"""
+SELECT COUNT(*) AS total
+FROM reviews r
+LEFT JOIN products p ON p.id = r.product_id
+{where_clause};
+"""
+        query = f"""
+SELECT r.id, r.product_id, r.customer_name, r.review, r.created_at,
+       p.title AS product_title, p.image1 AS product_image
+FROM reviews r
+LEFT JOIN products p ON p.id = r.product_id
+{where_clause}
+ORDER BY r.created_at DESC
+LIMIT %(limit)s OFFSET %(offset)s;
+"""
+
+        conn = None
+        try:
+            conn = get_db_connection()
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(count_query, params)
+                total = cur.fetchone()["total"]
+                cur.execute(query, params)
+                rows = cur.fetchall()
+                return {
+                    "items": rows,
+                    "total": total,
+                    "page": page,
+                    "limit": limit,
+                    "pages": math.ceil(total / limit) if total > 0 else 0,
+                }
+        except Exception as e:
+            print(f"Error fetching all reviews: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
+
+    @staticmethod
+    def delete_review(review_id: str):
+        DBService.ensure_reviews_table_exists()
+        query = "DELETE FROM reviews WHERE id = %s;"
+        conn = None
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cur:
+                cur.execute(query, (review_id,))
+                conn.commit()
+        except Exception as e:
+            print(f"Error deleting review: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
+
+    @staticmethod
     def create_product(product):
         DBService.ensure_table_exists()
         product_data = product.model_dump()
@@ -203,7 +278,9 @@ INSERT INTO products(
                 conn.close()
 
     @staticmethod
-    def get_products(page=1, limit=12, search="", category=None, sub_category=None):
+    def get_products(
+        page=1, limit=12, search="", category=None, sub_category=None, pinned_only=False
+    ):
         DBService.ensure_table_exists()
         page = max(int(page), 1)
         limit = max(int(limit), 1)
@@ -212,6 +289,8 @@ INSERT INTO products(
         conditions = []
         params = {}
 
+        if pinned_only:
+            conditions.append("pinned = TRUE")
         if search:
             conditions.append(
                 "(title ILIKE %(search)s OR description ILIKE %(search)s)"

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.routes import products
+from app.routes import products, reviews
 from app.config import get_db_connection
 import traceback
 import os
@@ -41,6 +41,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(products.router)
+app.include_router(reviews.router)
 
 
 @app.get("/")

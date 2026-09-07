@@ -7,6 +7,7 @@ from app.services.db_service import DBService
 
 router = APIRouter(prefix="/products", tags=["products"])
 
+
 @router.post("/", response_model=Product, response_model_by_alias=True)
 async def create_product(product: ProductCreate):
     try:
@@ -15,10 +16,12 @@ async def create_product(product: ProductCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @router.get("/test")
 async def test_endpoint():
     """Test endpoint to verify backend is working"""
     return {"message": "Backend is working", "status": "ok"}
+
 
 @router.get("/")
 async def get_products(
@@ -27,6 +30,7 @@ async def get_products(
     search: str = Query(""),
     category: str = Query(""),
     sub_category: str = Query(""),
+    pinned: bool = Query(False),
 ):
     try:
         products = DBService.get_products(
@@ -35,51 +39,79 @@ async def get_products(
             search=search.strip(),
             category=category.strip() or None,
             sub_category=sub_category.strip() or None,
+            pinned_only=pinned,
         )
         return products
     except Exception as e:
         import traceback
+
         print(f"Error in get_products: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
+
 @router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     try:
-        import cloudinary
-        import cloudinary.uploader
         import os
-        
-        # Configure cloudinary when endpoint is called
-        cloudinary.config(
-            cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-            api_key=os.getenv("CLOUDINARY_API_KEY"),
-            api_secret=os.getenv("CLOUDINARY_API_SECRET")
-        )
-        
+        import urllib.parse
+        import urllib.request
+        import json
+
+        api_key = os.getenv("IMGPILE_API_KEY")
+        if not api_key:
+            raise HTTPException(
+                status_code=500, detail="IMGPILE_API_KEY is not configured"
+            )
         file_content = await file.read()
-        
-        # Create a BytesIO object for Cloudinary
-        file_obj = BytesIO(file_content)
-        file_obj.name = file.filename or "upload.png"
-        
-        # Upload to Cloudinary
-        result = cloudinary.uploader.upload(
-            file_obj,
-            folder="keralajersey",
-            resource_type="auto",
-            public_id=file.filename.split('.')[0] if file.filename else None
+        if not file_content:
+            raise HTTPException(status_code=400, detail="Empty file")
+        filename = file.filename or "upload.jpg"
+        query = urllib.parse.urlencode({"filename": filename})
+        req = urllib.request.Request(
+            "https://imgpile.com/uploads?" + query,
+            data=file_content,
+            headers={
+                "Authorization": "Bearer " + api_key,
+                "Content-Type": "application/octet-stream",
+                "User-Agent": "keralajersey-backend/1.0",
+            },
+            method="POST",
         )
-        
-        return {"url": result.get("secure_url")}
-    except ImportError as e:
-        raise HTTPException(status_code=500, detail=f"Cloudinary SDK not installed: {str(e)}")
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                status = resp.status
+                body = resp.read().decode("utf-8", errors="replace")
+        except Exception as e:
+            raise HTTPException(
+                status_code=502, detail=f"ImgPile upload failed: {str(e)}"
+            )
+        if status != 201:
+            raise HTTPException(
+                status_code=502, detail=f"ImgPile upload failed: HTTP {status}"
+            )
+        try:
+            payload = json.loads(body)
+        except Exception:
+            raise HTTPException(
+                status_code=502, detail="ImgPile returned non-JSON response"
+            )
+        node = payload.get("data") or {}
+        urls = node.get("urls") or {}
+        original = urls.get("original") or ""
+        if not original.startswith("https://"):
+            raise HTTPException(
+                status_code=502, detail="ImgPile response missing original URL"
+            )
+        return {"url": original}
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
-        error_msg = str(e)
+
         traceback.print_exc()
-        print(f"Upload error: {error_msg}")
-        raise HTTPException(status_code=500, detail=f"Upload failed: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 
 @router.get("/{product_id}/reviews")
 async def get_reviews(product_id: str):
@@ -88,6 +120,7 @@ async def get_reviews(product_id: str):
         return reviews
     except Exception as e:
         import traceback
+
         print(f"Error in get_reviews: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -107,6 +140,7 @@ async def create_review(product_id: str, review: ReviewCreate):
         raise
     except Exception as e:
         import traceback
+
         print(f"Error in create_review: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
@@ -119,6 +153,7 @@ async def get_product(product_id: str):
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
+
 @router.put("/{product_id}", response_model=Product, response_model_by_alias=True)
 async def update_product(product_id: str, product_update: ProductUpdate):
     try:
@@ -128,6 +163,7 @@ async def update_product(product_id: str, product_update: ProductUpdate):
         return response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.delete("/{product_id}")
 async def delete_product(product_id: str):
