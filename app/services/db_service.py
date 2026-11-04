@@ -1,9 +1,14 @@
 import json
 import math
+import threading
 import uuid
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from app.config import get_db_connection
+
+_schema_ready = False
+_reviews_schema_ready = False
+_schema_lock = threading.Lock()
 
 CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS products (
@@ -43,22 +48,30 @@ CREATE TABLE IF NOT EXISTS reviews (
 class DBService:
     @staticmethod
     def ensure_table_exists():
-        conn = None
-        try:
-            conn = get_db_connection()
-            with conn.cursor() as cur:
-                cur.execute(CREATE_TABLE_SQL)
-                # Idempotent migration for existing tables
-                cur.execute(
-                    "ALTER TABLE products ADD COLUMN IF NOT EXISTS pinned BOOLEAN DEFAULT FALSE;"
-                )
-                conn.commit()
-        except Exception as e:
-            print(f"Error ensuring table exists: {e}")
-            raise
-        finally:
-            if conn:
-                conn.close()
+        """Runs the DDL migration once per process, then no-ops."""
+        global _schema_ready
+        if _schema_ready:
+            return
+        with _schema_lock:
+            if _schema_ready:
+                return
+            conn = None
+            try:
+                conn = get_db_connection()
+                with conn.cursor() as cur:
+                    cur.execute(CREATE_TABLE_SQL)
+                    # Idempotent migration for existing tables
+                    cur.execute(
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS pinned BOOLEAN DEFAULT FALSE;"
+                    )
+                    conn.commit()
+                _schema_ready = True
+            except Exception as e:
+                print(f"Error ensuring table exists: {e}")
+                raise
+            finally:
+                if conn:
+                    conn.close()
 
     @staticmethod
     def _row_to_product(row):
@@ -85,18 +98,26 @@ class DBService:
 
     @staticmethod
     def ensure_reviews_table_exists():
-        conn = None
-        try:
-            conn = get_db_connection()
-            with conn.cursor() as cur:
-                cur.execute(CREATE_REVIEWS_TABLE_SQL)
-                conn.commit()
-        except Exception as e:
-            print(f"Error ensuring reviews table exists: {e}")
-            raise
-        finally:
-            if conn:
-                conn.close()
+        """Runs the reviews DDL once per process, then no-ops."""
+        global _reviews_schema_ready
+        if _reviews_schema_ready:
+            return
+        with _schema_lock:
+            if _reviews_schema_ready:
+                return
+            conn = None
+            try:
+                conn = get_db_connection()
+                with conn.cursor() as cur:
+                    cur.execute(CREATE_REVIEWS_TABLE_SQL)
+                    conn.commit()
+                _reviews_schema_ready = True
+            except Exception as e:
+                print(f"Error ensuring reviews table exists: {e}")
+                raise
+            finally:
+                if conn:
+                    conn.close()
 
     @staticmethod
     def create_review(product_id: str, customer_name: str, review: str):
@@ -341,7 +362,6 @@ INSERT INTO products(
 
     @staticmethod
     def get_product(product_id: str):
-        DBService.ensure_table_exists()
         query = "SELECT * FROM products WHERE id = %s;"
         conn = None
         try:
